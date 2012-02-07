@@ -12,7 +12,7 @@ import string
 import bisect
 import os.path
 sys.path.append( os.path.join( os.getenv( 'HOME' ), 'local', 'lib', 'python' ) )
-import finder
+import trie
 import sys
 from ConfigParser import ConfigParser
 
@@ -124,7 +124,7 @@ def _ask_create_dir( name, mode=0740 ):
 config = ConfigParser()
 config.add_section( 'basic' )
 config.set( 'basic', 'show_tasks', '20' )
-config.set( 'basic', 'top_dir', os.path.join( os.getenv("HOME"), "task-projekt" ) )
+config.set( 'basic', 'top_dir', os.path.join( os.getenv("HOME"), ".tcli" ) )
 config.set( 'basic', 'task_dir', os.path.join( config.get( 'basic', 'top_dir' ), 'tasks' ) )
 config.set( 'basic', 'thrash_dir', os.path.join( config.get( 'basic', 'top_dir' ), 'thrash' ) )
 config.set( 'basic', 'closed_dir', os.path.join( config.get( 'basic', 'top_dir' ), 'closed' ) )
@@ -146,7 +146,7 @@ class task( object ):
         self.prio = 9 # prio written in task (or 9 if omitted or invalid)
         self.realprio = 90; # sortprio
         self.subj = "[no subject]"
-        self.open = True # True = open, False = close        
+        self.open = True # True = open, False = closed        
         self.rtime = self.mtime() # modification time of file when object created
         self.tags = dict()
         self.read_header()
@@ -166,11 +166,6 @@ class task( object ):
         s = str()
         s += self.filename + ": [" + str(self.prio) + "] "\
              + self.subj + "[" + str(self.date) + "]" + str(self.realprio)
-        return s
-
-    def string_old(self):
-        s = str()
-        s+= "[" + str(self.prio) + "] " + self.subj + " [" + str(self.date) + "]"
         return s
 
     def string(self):
@@ -296,7 +291,7 @@ class task_cache( object ):
     # tag højde for at der skal genprioriteres når der er gået en dag
     def __init__(self):
         self.cache = dict()
-        self.index = finder.rtrie() # search index
+        self.index = trie.Trie() # search index
         self.sorted_tasks = sorted_dict() # sorted list of all tasks (filenames)
         self.toc = [] # list of short task number -> filename
         self.tasks_to_show = 19
@@ -322,7 +317,8 @@ class task_cache( object ):
         self.cache[filename] = t
         # put task into trie by tags
         for tag in t.tags.keys():
-            self.index.insert_term(tag, filename)
+            debug( "putting %s:%s in index"%( tag, filename ) )
+            self.index.insert( list( tag ), filename )
         # put into sorted_tasks
         if t.open:
             # self.sorted_tasks.insert( t.filename )
@@ -346,7 +342,9 @@ class task_cache( object ):
 
     def find(self, tag):
         """wrapper to find on index"""
-        return self.index.find_term(tag)
+        files = self.index.retrieve( list( tag ) )
+        debug( "files found for %s: %s"%( tag, files ) )
+        return self.index.retrieve( list( tag ) )
 
 
     def update(self):
@@ -382,11 +380,14 @@ class task_cache( object ):
         """prints the n first tasks in tasks"""
         self.toc = dict()
         for n,t in enumerate(tasks):
-            nstr = "(%d)" % n
-            print "%4s %s" % (nstr, t.string() )
-            self.toc[n] = t.filename
-            if n >= self.tasks_to_show:
-                break
+            if t.open:
+                nstr = "(%d)" % n
+                print "%4s %s" % (nstr, t.string() )
+                self.toc[n] = t.filename
+                if n >= self.tasks_to_show:
+                    break
+            else:
+                info( "Not showing closed task %d %s" % (n, t.string() ) )
 
 #\todo: tag højde for at cachede ting ikke bliver ryddet op
         
