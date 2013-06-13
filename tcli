@@ -491,7 +491,11 @@ class Taskmanager( object ):
             token = int( raw_input( 'Please enter no of task to open: ' ) )
         debug( "Trying to open task %s"%( token ) )
         debug( "From list=%s"%( self.tasks.toc ) )
-        edit_task( self.tasks.toc[ int( token ) ])
+        if len( self.tasks.toc ) > 0:
+            edit_task( self.tasks.toc[ int( token ) ])
+        else:
+            error( 'no task for number {}'.format( token ) )
+            return
 
 
     def handle_close( self, token ):
@@ -504,7 +508,11 @@ class Taskmanager( object ):
             token = int( raw_input( 'Please enter no of task to close: ' ) )
         debug( "Trying to close task %s"%( token ) )
         debug( "From list=%s"%( self.tasks.toc ) )
-        filename = self.tasks.toc[ int( token ) ]
+        if len( self.tasks.toc ) > 0:
+            filename = self.tasks.toc[ int( token ) ]
+        else:
+            error( 'no task for number {}'.format( token ) )
+            return
         debug( "closing task in %s"%( filename ) )
         f = open( filename )
         header_line = re.compile(r'^(stat):\s*(.*)\s*$')
